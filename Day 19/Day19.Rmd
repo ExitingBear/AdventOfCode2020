@@ -1,0 +1,234 @@
+---
+title: "Day 19 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+#input<-read_lines("Day19Sample2.txt")
+input<-read_lines("../../AoCData/AOC2020/Day19.txt")
+```
+Split input into rules and messages:
+```{r}
+bl<-which(input=="")
+validrules<-input[1:(bl-1)]
+recmess<-input[(bl+1):length(input)]
+```
+
+
+
+
+## Part 1
+I thought I could just run through the rules over and over, moving them to the rule dictionary once they
+are fully defined.
+BUT - 0 takes too long to calculate, so stopping when I get to 8 and 11 (which are the rules that make up 0)
+
+```{r}
+rulemaker<-function(rules){
+  
+  rd<-dict()
+  i<-1
+  ##Until "0" is defined
+  while(!rd$has("8")|!rd$has("11")){
+    while(i>length(rules)){i<-i-length(rules)}
+
+    ### split rule into key & value
+    trk<-unlist(str_split_i(rules[i],": ",1))
+    trv<-unlist(str_split_i(rules[i],": ",2))
+    ### simple case - if trv is a single letter, enter it into the dictionary.
+    if(str_detect(trv,"[:alpha:]")){
+      rd$set(trk,str_sub(trv,2,2))
+      rules<-rules[-i]
+      if(i>length(rules)){i<-i-length(rules)}
+      next}
+    ## else
+    ## check the components of the rule
+    isallthere<-unlist(str_split(trv," \\| | "))
+    ### if all the components in the dictionary, move forward
+    isallthere<-all(sapply(isallthere,function(x){rd$has(x)}))
+    ### if all the components exist, update the rule in the dictionary
+    if(isallthere){
+      nxttrv<-c()
+      ## split along the "or"
+      trv<-unlist(str_split(trv," \\| "))
+      ## for each part of the "or"
+      for(j in 1:length(trv)){
+        tinysplit<-unlist(str_split(trv[j]," "))
+        tinysplit<-lapply(tinysplit,function(x){rd$get(x)})
+        nxttrv<-c(nxttrv,smushvalues(tinysplit))}
+      rd$set(trk,nxttrv)
+      ### remove the rule from the list of rules
+      rules<-rules[-i]}
+    i<-i+1
+  }
+  list(rd$get("8"),rd$get("11"))}
+```
+
+
+
+
+```{r}
+smushvalues<-function(vs){
+  smushed<-c()
+  if(length(vs)==1){smushed<-unlist(vs)
+  }else{
+    a<-unlist(vs[[1]])
+    for(i in 2:length(vs)){
+      c<-c()
+      b<-unlist(vs[[i]])
+      for(j in 1:length(a)){
+        for(k in 1:length(b)){
+      c<-c(c,str_c(a[j],b[k]))}}
+      a<-c}
+      smushed<-c}
+unique(smushed)}
+
+smushvalues(list(c("a","b","g"),c("c","d"),c("e","f")))
+```
+
+```{r}
+eighteleven<-rulemaker(validrules)
+ruleeight<-unlist(eighteleven[[1]])
+ruleeleven<-unlist(eighteleven[[2]])
+```
+
+a quick check shows that 8 always has 8 characters and 11 always has 16 characters
+```{r}
+min(nchar(ruleeight))
+max(nchar(ruleeight))
+min(nchar(ruleeleven))
+max(nchar(ruleeleven))
+```
+
+So, from there, check to see which messages are valid - the valid ones will be 24 characters long, the first 8 characters in rule 8, the last 16 characters in rule 11
+
+```{r}
+part1<-sapply(recmess,function(x){
+  if(nchar(x)!=24){a<-FALSE}else{a<-TRUE}
+  if(!str_sub(x,1,8)%in%ruleeight){b<-FALSE}else{b<-TRUE}
+  if(!str_sub(x,9,24)%in%ruleeleven){c<-FALSE}else{c<-TRUE}
+  all(a,b,c)})
+part1<-sum(part1)
+part1
+```
+
+## Part 2
+Due to the hint (thank you!), the match is
+42 (n times) followed by 31 (m times) where both n & m are at least 1 *and* n is at least 1 more than m.
+
+First - change rulemaker so it's easier to tell it when to stop
+
+```{r}
+rulemaker<-function(rules,stopit){
+  rd<-dict()
+  i<-1
+  ##Until "0" is defined
+  keepgoing<-all(sapply(stopit,function(x){rd$has(x)}))
+  while(!keepgoing){
+    while(i>length(rules)){i<-i-length(rules)}
+
+    ### split rule into key & value
+    trk<-unlist(str_split_i(rules[i],": ",1))
+    trv<-unlist(str_split_i(rules[i],": ",2))
+    ### simple case - if trv is a single letter, enter it into the dictionary.
+    if(str_detect(trv,"[:alpha:]")){
+      rd$set(trk,str_sub(trv,2,2))
+      rules<-rules[-i]
+      cat(trk,"->",str_sub(trv,2,2),"\n")
+      if(i>length(rules)){i<-i-length(rules)}
+      next}
+    ## else
+    ## check the components of the rule
+    isallthere<-unlist(str_split(trv," \\| | "))
+    ### if all the components in the dictionary, move forward
+    isallthere<-all(sapply(isallthere,function(x){rd$has(x)}))
+    ### if all the components exist, update the rule in the dictionary
+    if(isallthere){
+      nxttrv<-c()
+      ## split along the "or"
+      trv<-unlist(str_split(trv," \\| "))
+      ## for each part of the "or"
+      for(j in 1:length(trv)){
+        tinysplit<-unlist(str_split(trv[j]," "))
+        tinysplit<-lapply(tinysplit,function(x){rd$get(x)})
+        nxttrv<-c(nxttrv,smushvalues(tinysplit))}
+      rd$set(trk,nxttrv)
+      cat(trk,"->","\n")
+      ### remove the rule from the list of rules
+      rules<-rules[-i]}
+    i<-i+1
+    keepgoing<-all(sapply(stopit,function(x){rd$has(x)}))}
+  
+  lapply(stopit,function(x){rd$get(x)})}
+```
+
+Then use it to get 42 & 31
+
+```{r}
+fortytwothrirtyone<-rulemaker(validrules,c("42","31"))
+rule42<-unlist(fortytwothrirtyone[[1]])
+rule31<-unlist(fortytwothrirtyone[[2]])
+```
+
+and as before, confirm the length of the blocks:
+
+```{r}
+min(nchar(rule42))
+max(nchar(rule42))
+min(nchar(rule31))
+max(nchar(rule31))
+```
+
+For every message, divide it into 8 character blocks and determine if each block is in 42, 31, both, or neither.
+
+```{r}
+blocksort<-sapply(recmess,function(x){
+  bs<-c()
+  for(i in seq(from=1,to=nchar(x),by=8)){
+    y<-str_sub(x,i,(i+7))
+    if(y%in%rule42&&y%in%rule31){q<-73
+    }else if(y%in%rule42){q<-42
+    }else if(y%in%rule31){q<-31
+    }else{q<-0}
+  bs<-c(bs,q)}
+bs})
+blocksort[1:10]
+```
+a manual check says there are no "boths" which makes this easier
+
+```{r}
+isvalid<-function(v){
+  checkv<-TRUE
+  ### every block must match something
+  if(any(is.na(v))){return(FALSE)}
+  ### every first block must be 42
+  if(v[1]!=42 && v[1]){return(FALSE)}
+  ### every last block must be 31
+  if(v[length(v)]!=31){return(FALSE)}
+  threeone<-which(v==31)
+  fourtwo<-which(v==42)
+  ### there must be more 42s than 31s
+  if(length(threeone)>=length(fourtwo)){return(FALSE)}
+  s<-c()
+  ### all the 42s must come before all the 31s
+  for(i in 1:length(fourtwo)){s<-c(s,fourtwo[i]<threeone)}
+  if(!all(s)){return(FALSE)}
+checkv}
+
+part2<-sapply(blocksort,isvalid)
+for(i in 1:10){cat(recmess[i],"\t",blocksort[[i]],"\t",part2[i],"\n")}
+```
+```{r}
+part2<-sum(part2)
+part2
+```
+

@@ -1,0 +1,207 @@
+---
+title: "Day 16 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+Start by parsing the input
+
+```{r}
+input<-read_lines("Day16Sample2.txt")
+```
+Split this into three parts
+
+- the rules as a data.frame
+- the my ticket (vector of numbers)
+- nearby tickets (vector of strings, to start)
+Rules:
+```{r}
+bl<-which(input=="")
+### set the rules
+rulesdf<-as.data.frame(matrix(nrow=0,ncol=3))
+### because all of the lines in the data had the rules as two ranges
+### for each line of rules, create two lines in the data frame (rule name, low, high) for each range
+for(i in 1:(bl[1]-1)){
+x<-input[i]
+x<-unlist(str_split(x,": |-| or "))
+rulesdf<-rbind(rulesdf,list(x[1],x[2],x[3]))
+rulesdf<-rbind(rulesdf,list(x[1],x[4],x[5]))}
+colnames(rulesdf)<-c("field","low","high")
+rulesdf$high<-as.numeric(rulesdf$high)
+rulesdf$low<-as.numeric(rulesdf$low)
+```
+
+My ticket
+```{r}
+myticket<-as.numeric(unlist(str_split(input[bl[1]+2],",")))
+```
+
+Nearby tickets
+```{r}
+nearbytickets<-input[(bl[2]+2):length(input)]
+```
+
+## Part 1
+Collect all numbers that do not fit into any of the ranges
+```{r}
+invalidvalues<-function(nt,r){
+  ### create vector to hold the values that don't fit
+  ivals<-c()
+  for(i in 1:length(nt)){
+    ### for each ticket line,
+    t<-as.numeric(unlist(str_split(nt[i],",")))
+    for(j in 1:length(t)){
+      ### check each number
+      p<-t[j]
+      ### check the numbers by testing them with each range (is it higher than low and lower than high)
+     ok<-(sapply(1:nrow(r),function(x){
+       (p>=r$low[x]&&p<=r$high[x])}))
+     ### if it fits any of the ranges, it is "ok"
+     ok<-any(ok)
+     ### if it is not ok, add it to the list of invalid values
+     if(!ok){
+       ivals<-c(ivals,p)}}}
+  ### return invalid values
+ivals}
+```
+
+Part 1 is the sum of all invalid values
+```{r}
+
+part1<-sum(invalidvalues(nearbytickets,rulesdf))
+part1
+```
+## Part 2
+
+Steps (and the functions to go with them) - 
+
+1 - actually remove the invalid lines
+2 - find all possible fields for each position
+3 - make the mapping unique
+4 - identify the "departure" fields
+5 - apply that to my ticket to get answer to part 2
+
+First, remove the invalid lines (take in nearby tickets and rules):
+```{r}
+validatetickets<-function(nt,r){
+  ### create a dataframe for the tickets that are "good," each field is a column
+  goodtickets<-as.data.frame(matrix(nrow=0,ncol=length(unlist(str_split(nearbytickets[1],",")))))
+  ## for each ticket 
+  for(i in 1:length(nt)){
+    ### split the ticket into pieces
+    t<-as.numeric(unlist(str_split(nt[i],",")))
+    ### assume it is valid
+    v<-TRUE
+    j<-1
+    ### for each field - as long as no fields are invalid
+    while(j<=length(t)&&v){
+      ### as above, see if it fits into *any* of the ranges.
+      p<-t[j]
+      ok<-(sapply(1:nrow(r),function(x){
+        (p>=r$low[x]&&p<=r$high[x])}))
+      ok<-any(ok)
+      ### if not - the ticket is invalid 
+      if(!ok){v<-FALSE}
+      j<-j+1}
+    ### if the ticket  was valid, put the ticket in the frame of good tickets and move to the next ticket 
+    if(v){goodtickets<-rbind(goodtickets,t)}
+    i<-i+1}
+  ### return a frame of good tickets
+goodtickets}
+```
+
+```{r}
+validtickets<-validatetickets(nearbytickets,rulesdf)
+```
+
+Using the valid tickets, find out which field each column could possibly be - takes in valid tickets and rules
+
+```{r}
+findfields<-function(rules,tickets){
+  ### create the dataframe that will hold a field name and a column that might work for that field
+  possibles<-as.data.frame(matrix(nrow=0,ncol=0))
+  ### for each column in the list of good tickets
+  for(t in 1:ncol(tickets)){
+    f<-tickets[,t]
+    ### because the rules are split between two lines
+    for(r in seq(from=1,to=nrow(rules),by=2)){
+      ### check to see which fit into the first range of the rules
+      a<-f>=rules[r,2]&f<=rules[r,3]
+      ### check to see which fit into the second range of the rules
+      b<-f>=rules[(r+1),2]&f<=rules[(r+1),3]
+      c<-a|b
+      ### if all of the column fits into either of the ranges - add that as a possible mapping
+      if(all(c)){possibles<-rbind(possibles,c(rules[r,1],t))}}}
+  ### update the possible maps data.frame with labels on the column names
+colnames(possibles)<-c("name","num")
+### make the numbers numbers
+possibles$num<-as.numeric(possibles$num)
+possibles}
+```
+ 
+```{r}
+possiblefields<-findfields(rulesdf,validtickets)
+possiblefields
+```
+
+Narrow down the fields so that there's a 1-to-1 relationship
+
+```{r}
+narrowfields<-function(poss){
+  ## this is sloppy
+  j<-1
+  ### each row is a possible field name/position number relationship
+  ### as long as there are more rows than  unique position numbers, something has multiple options -
+  while(nrow(poss)>length(unique(poss$num))){
+    ### take possibility
+    jnum<-poss$num[j]
+    jname<-poss$name[j]
+    ### if that column can only be one field
+    if(length(which(poss$num==jnum))==1){
+      ### check to see if any other columns are marked as could be that field.
+      ### if so, remove those lines (because that field is now associated with the column uniquely)
+      if(length(which(poss$name==jname))>1){
+      poss<-poss %>% rowwise %>%
+        ### mark the rows to be removed
+        mutate(bye=ifelse(num!=jnum&&name==jname,F,T))%>%
+        ### filter the rows
+        filter(bye)%>%
+        ### remove the marker
+        select (-bye)}}
+    ### get ready to look at a new row.
+    j<-j+1
+    if(j>nrow(poss)){j<-j-nrow(poss)}
+  }
+  ### return the 1-to-1 list of field names to ticket position numbers
+  poss}
+```
+
+```{r}
+fieldmap<-narrowfields(possiblefields)
+fieldmap
+```
+
+Look at the fields that have "departure" in the name
+
+```{r}
+departurefields<-filter(fieldmap,str_detect(name,"departure"))
+departurefields
+```
+
+apply that to my ticket and find the product of those fields
+
+```{r}
+part2<-myticket[departurefields$num]
+part2<-if(length(part2)>0){prod(part2)}else{0}
+part2
+```
+

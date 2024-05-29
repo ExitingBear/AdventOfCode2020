@@ -1,0 +1,261 @@
+---
+title: "Day 20 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(igraph)
+library(ggplot2)
+library(ggraph)
+library(reshape2)
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+library(stringi)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day20Sample.txt")
+bl<-c(0,which(input==""),length(input)+1)
+```
+
+I think this might be a map...
+
+## Part 1
+
+Bring each of these in as a node
+
+```{r}
+## make each tile a list of a tile name & their sides converted into numbers (using binary)
+## read the sides both ways (to account for flipping the tile)
+## make a list of all t
+tilelist<-list()
+for(i in 1:(length(bl)-1)){
+  tl<-str_sub(input[bl[i]+1],6,-2)
+  a<-input[bl[i]+2]
+  b<-input[bl[i+1]-1]
+  c<-str_flatten(sapply((bl[i]+2):(bl[i+1]-1),function(x){str_sub(input[x],1,1)}))
+  d<-str_flatten(sapply((bl[i]+2):(bl[i+1]-1),function(x){str_sub(input[x],nchar(input[x]),nchar(input[x]))}))
+  e<-stri_reverse(a)
+  f<-stri_reverse(b)
+  g<-stri_reverse(c)
+  h<-stri_reverse(d)
+  sides<-c(a,b,c,d,e,f,g,h)
+  sides<-sapply(sides,function(x){str_replace_all(x,"#","1")})
+  sides<-sapply(sides,function(x){str_replace_all(x,"\\.","0")})
+  sides<-strtoi(sides,2)
+  tile<-list(tl,sides)
+  tilelist<-c(tilelist,list(tile))}
+
+```
+
+
+```{r}
+### check for numbers that match on two tiles - use that to create an edgelist
+
+tlmat<-matrix(nrow=0,ncol=2)
+for(i in 1:(length(tilelist)-1)){
+  for(j in (i+1):length(tilelist)){
+    mtch<-any(sapply(tilelist[[i]][2],function(y){y%in%unlist(tilelist[[j]][2])}))
+    if(mtch){x<-c(tilelist[[i]][1],tilelist[[j]][1])
+    tlmat<-rbind(tlmat,as.character(x))}}}
+tlmat<-as.matrix(tlmat)
+
+
+## use the edgelist to create a graph
+tilegraph<-graph_from_edgelist(tlmat,directed=FALSE)
+```
+
+
+```{r}
+plgr<-ggraph(tilegraph,layout="stress")+
+  geom_edge_link()+
+  geom_node_label(aes(label=name))
+plgr
+
+```
+
+From there, get the corners (the ones with only two connections)
+```{r}
+crnrs<-which(sapply(V(tilegraph),function(x){length(neighbors(tilegraph,x))})==2)
+crnrs<-V(tilegraph)$name[crnrs]
+part1<-prod(as.numeric(crnrs))
+part1
+```
+## Part 2
+I actually have to put it together.
+
+```{r}
+### flips and rotates square matrices
+fandr<-function(m,n){
+  y<-nrow(m)+1
+  newm<-matrix(NA,ncol=ncol(m),nrow=nrow(m))
+  switch(n,
+         "1"=for(r in 1:nrow(m)){for(c in 1:ncol(m)){newm[r,c]=m[c,r]}},
+         "2"=for(r in 1:nrow(m)){for(c in 1:ncol(m)){newm[r,c]=m[(y-c),r]}},
+         "3"=for(r in 1:nrow(m)){for(c in 1:ncol(m)){newm[r,c]=m[c,(y-r)]}},
+         "4"=for(r in 1:nrow(m)){for(c in 1:ncol(m)){newm[r,c]=m[(y-c),(y-r)]}},
+         "5"=for(r in 1:nrow(m)){for(c in 1:ncol(m)){newm[r,c]=m[(y-r),c]}},
+         "6"=for(r in 1:nrow(m)){for(c in 1:ncol(m)){newm[r,c]=m[r,(y-c)]}},
+         "7"=for(r in 1:nrow(m)){for(c in 1:ncol(m)){newm[r,c]=m[(y-r),(y-c)]}},
+         cat("bad flip"))
+newm}
+```
+
+
+I need the tiles/side and also the size of a tile
+```{r}
+tilesperside<-sqrt(length(tilelist))
+tilesize<-nchar(input[2])
+```
+Start by getting the first row - 
+
+```{r}
+### get the top row
+if(length(shortest_paths(tilegraph,from=crnrs[1],to=crnrs[-1],output="vpath")[[1]][[1]])==tilesperside){
+  firstrow<-shortest_paths(tilegraph,from=crnrs[1],to=crnrs[-1],output="vpath")[[1]][[1]]$name
+}else{firstrow<-shortest_paths(tilegraph,from=crnrs[1],to=crnrs[-1],output="vpath")[[1]][[2]]$name}
+
+### calling it "nametrix" for "name matrix"
+nametrix<-matrix(nrow=0,ncol=tilesperside)
+nametrix<-rbind(nametrix,unname(firstrow))
+```
+For all subsequent rows - look at the most recent row and grab the first & last tile
+find the tiles that are connected to them, but not already in the matrix
+find the shortest path between them
+add that to the matrix
+repeat
+```{r}
+for(i in 1:(tilesperside-1)){
+  lft<-nametrix[i,1]
+  rgt<-nametrix[i,tilesperside]
+  nxtlft<-neighbors(tilegraph,v=lft)$name
+  nxtlft<-nxtlft[-which(nxtlft%in%nametrix)]
+  nxtrgt<-neighbors(tilegraph,v=rgt)$name
+  nxtrgt<-nxtrgt[-which(nxtrgt%in%nametrix)]
+  nxtrow<-shortest_paths(tilegraph,from=nxtlft,to=nxtrgt,output="vpath")[[1]][[1]]$name
+  nametrix<-rbind(nametrix,unname(nxtrow))
+}
+```
+Put the tiles into a dictionary, so I don't have to think about them anymore
+
+```{r}
+tiledict<-dict()
+for(i in 1:(length(bl)-1)){
+  tlk<-str_sub(input[bl[i]+1],6,-2)
+  tlv<-matrix(nrow=(bl[2]-bl[1]-2),ncol=nchar(input[2]))
+  for(j in 1:nchar(input[2])){tlv[j,]<-unlist(str_split(input[bl[i]+j+1],""))}
+  tiledict$set(tlk,tlv)}
+```
+
+
+
+Function to take in a row of tile numbers and return the expanded matrix
+```{r}
+makerow<-function(v,td){
+## start with the first two - 
+  tile1<-td$get(v[1])
+  y<-nrow(tile1)+1
+  t2edges<-td$get(v[2])
+  t2edges<-c(str_flatten(t2edges[1,]),
+             str_flatten(t2edges[,1]),
+             str_flatten(t2edges[nrow(t2edges),]),
+             str_flatten(t2edges[,ncol(t2edges)]),
+             str_flatten(rev(t2edges[1,])),
+             str_flatten(rev(t2edges[,1])),
+             str_flatten(rev(t2edges[nrow(t2edges),])),
+             str_flatten(rev(t2edges[,ncol(t2edges)])))
+  ### align the corner
+  while(!str_flatten(tile1[,nrow(tile1)])%in%t2edges){
+    tile1<-fandr(tile1,2)}
+  ### outline is the full row of aligned tiles
+  outline<-tile1
+  ### place the remainder of the pieces
+  for(i in 2:length(v)){
+    j<-1
+    pt<-td$get(v[i])
+    reorient<-pt
+    while(str_flatten(reorient[,1])!=str_flatten(outline[,ncol(outline)])){
+      reorient<-fandr(pt,j)
+      j<-j+1}
+    outline<-cbind(outline,reorient)}
+  outline}
+
+```
+
+use makerow to go through the rows until there's a full giant matrix of all of the tiles
+
+```{r}
+alltiles<-function(m,td){
+  ## as with before, the biggest difficulty is orienting the first row
+  r1<-makerow(m[1,],td)
+  r2<-makerow(m[2,],td)
+  ## check to see if it lines up on the top row or the bottom row
+  ### if it does, flip it.  Otherwise, it is oriented correctly
+  if(all(r1[1,]==r2[1,])||all(r1[1,]==r2[nrow(r2),])){
+    outm<-r1[nrow(r1):1,]
+  }else{outm<-r1}
+  ### with the top row oriented correctly, line up the remaining rows
+  for(j in 2:nrow(m)){
+    nxtrow<-makerow(m[j,],td)
+    if(all(nxtrow[1,]==outm[nrow(outm),])){outm<-rbind(outm,nxtrow)
+    }else if(all(nxtrow[nrow(nxtrow),]==outm[nrow(outm),])){
+      outm<-rbind(outm,nxtrow[nrow(nxtrow):1,])
+    }else{cat("oops\n")}}
+outm}
+```
+
+
+```{r}
+expandedtiles<-alltiles(nametrix,tiledict)
+```
+
+now, remove the match rows&columns  (if it hasn't been mentioned - this absolutely 100% needs squares.  THI)
+
+```{r}
+dumprows<-c(seq(from=1,to=ncol(expandedtiles),by=tilesize),seq(from=tilesize,to=ncol(expandedtiles),by=tilesize))
+wheresnessie<-expandedtiles[-dumprows,-dumprows]
+```
+
+It's (finally) time to look for the monster - 
+first, pull it in
+```{r}
+nessie<-read_lines("nessie.txt")
+nessiematrix<-matrix(0,nrow=length(nessie),ncol=nchar(nessie[1]))
+for(i in 1:length(nessie)){nessiematrix[i,]<-(unlist(str_split(nessie[i],"")))}
+nessiesonar<-which(nessiematrix=="#",arr.ind=TRUE)
+### we want the offset from start
+nessiesonar<-nessiesonar-c(1,1)
+```
+Then check against every orientation of the map 
+
+
+
+```{r}
+ workingmap<-wheresnessie
+ ncount<-0
+ i<-0
+ while(ncount==0){
+   for(r in 1:(nrow(workingmap)-nrow(nessiematrix)+1)){
+     for(c in 1:(ncol(workingmap)-ncol(nessiematrix)+1)){
+       chck<-sapply(1:nrow(nessiesonar),function(x){
+         ### get the list of offset spaces
+         y<-nessiesonar[x,]+c(r,c)
+         ### get all of those places on the map
+         y<-workingmap[y[1],y[2]]
+       y})
+       if(all(chck=="#")){ncount<-ncount+1}}
+     #cat(paste(chck),"\n")
+     }
+ i<-i+1
+ ### if no monsters found, flip the main map
+ workingmap<-fandr(wheresnessie,i)}
+ ### if the monsters do not overlap, this will give the answer
+ ### Because this was true for me, I'm not solving the bigger picture
+ length(which(wheresnessie=="#"))-ncount*15
+```
+

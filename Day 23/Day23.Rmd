@@ -1,0 +1,107 @@
+---
+title: "Day 23 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-c("389125467") ## Sample Data
+input<-as.numeric(unlist(str_split(input,"")))
+input
+```
+
+
+```{r}
+playcups<-function(cups,reps){
+  i<-1
+  while(i<=reps){
+    pickup<-cups[2:4]
+    cups<-cups[-(2:4)]
+    dest<-cups[1]-1
+    while(!dest%in%cups&dest>0){dest<-dest-1}
+    if(dest==0){dest<-max(cups)}
+    dest<-which(cups==dest)
+    if(dest==length(cups)){
+      cups<-c(cups,pickup)
+    }else{cups<-c(cups[1:dest],pickup,cups[(dest+1):length(cups)])}
+    cups<-c(cups[-1],cups[1])
+    i<-i+1}
+  x<-which(cups==1)
+  if(x==length(cups)){
+    cups<-cups[-x]
+  }else if(x==1){
+    cups<-cups[-1]
+  }else{
+    cups<-c(cups[(x+1):length(cups)],cups[1:(x-1)])}
+  cups<-str_flatten(cups)
+  cups}
+```
+
+```{r}
+playcups(input,10)
+```
+## Part 2
+
+BRUTE FORCE!!!!!!!!!!!!  Tried it.  It will take 5+days.
+
+```{r}
+x<-c(input,(length(input)+1):1000000)
+```
+
+Change the algorithm drastically - instead of literally moving the numbers around, tell each number what number is behind it and change that as the cups move around
+
+```{r}
+#### works, but slow
+playcups2<-function(cups,reps){
+  ### set up the lookup
+  behindme<-rep(NA,length(cups))
+  for (i in 1:(length(cups))-1){
+    behindme[cups[i]]<-cups[i+1]}
+  behindme[cups[length(cups)]]<-cups[1]
+  r<-1
+  now<-cups[1]
+  while(r<=reps){
+    ### find the three cups that need to move
+    pickup1<-behindme[now]
+    pickup2<-behindme[pickup1]
+    pickup3<-behindme[pickup2]
+    number4<-behindme[pickup3]
+    ### find the destination
+    dest<-now
+    while(dest%in%c(now,pickup1,pickup2,pickup3)){dest<-dest-1
+    if(dest==0){dest<-max(cups)}}
+    cutinfrontof<-behindme[dest]
+    ### put pickup 1 behind destination
+    behindme[dest]<-pickup1
+    ### put the cut behind pickup 3
+    behindme[pickup3]<-cutinfrontof
+    ### put number 4 behind now
+    behindme[now]<-number4
+    ### number 4 is the new now
+    now<-number4
+    r<-r+1}
+  ## find the two after 1
+  clock1<-behindme[1]
+  clockclock1<-behindme[clock1]
+  ## multiply them for the answer
+  cat(clock1,clockclock1,"\n")
+  prod(clock1,clockclock1)}
+```
+
+
+```{r}
+playcups2(x,10000000)
+```
+
+
+

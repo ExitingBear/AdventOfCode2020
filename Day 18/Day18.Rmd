@@ -1,0 +1,107 @@
+---
+title: "Day 18 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+#input<-read_lines("Day18Sample.txt")
+input<-read_lines("../../AoCData/AOC2020/Day18.txt")
+
+```
+
+## Part 1
+
+Start with a function that takes in a string (without parenthesis) and evaluates it.
+
+```{r}
+mathit<-function(s){
+  ### start with the first number
+  s<-unlist(str_split(s," "))
+  answer<-as.numeric(s[1])
+  s<-s[-1]
+  while(length(s)){
+    ### if there's a +, then add the next number
+    if(s[1]=="+"){
+      answer<-answer+as.numeric(s[2])
+    }else if(s[1]=="*"){
+      ### if there's a * then multiply it
+      answer<-answer*as.numeric(s[2])
+    }else{cat("oops\n")}
+    ### keep going
+    s<-s[-c(1,2)]}
+  ### return as a character
+as.character(answer)}
+```
+
+then the function that takes care of the parenthesis
+
+```{r}
+parenmath<-function(s){
+  ### as long as there are parentheses
+  while(str_detect(s,"\\(")){
+    ### find the first right paren
+    rgt<-unlist(str_locate(s,"\\)")[1])
+    ### find the closest left paren
+    lft<-str_locate_all(str_sub(s,1,rgt),"\\(")[[1]]
+    lft<-lft[nrow(lft),1]
+    ### evaluate that and substitute it back in
+    m<-mathit(str_sub(s,lft+1,rgt-1))
+    str_sub(s,lft,rgt)<-m}
+  ### evaluate the remaining parentheses-less string & return as a number
+  s<-as.numeric(mathit(s))
+s}
+```
+
+```{r}
+part1<-sum(sapply(input,parenmath))
+part1
+```
+## Part 2
+
+Replace the way that a non-parenthesis string gets evaluated
+```{r}
+addfirst<-function(s){
+  s<-unlist(str_split(s," "))
+  ### if there are any +s, add the numbers to either side of the +
+  while("+" %in% s){
+    x<-min(which(s=="+"))
+    s[x]<-as.character(as.numeric(s[x-1])+as.numeric(s[x+1]))
+    s<-s[-c(x-1,x+1)]}
+  ### once all of those are gone, multiply the remaining numbers together
+  s<-as.numeric(s[seq(from=1,to=length(s),by=2)])
+  s<-as.character(prod(s))
+  ### return as a character
+s}
+
+```
+
+
+This works exactly the same way as the above, just with the different order of operations.
+```{r}
+advancedparen<-function(s){
+  while(str_detect(s,"\\(")){
+    rgt<-unlist(str_locate(s,"\\)")[1])
+    lft<-str_locate_all(str_sub(s,1,rgt),"\\(")[[1]]
+    lft<-lft[nrow(lft),1]
+    m<-addfirst(str_sub(s,lft+1,rgt-1))
+    str_sub(s,lft,rgt)<-m}
+  s<-as.numeric(addfirst(s))
+s}
+```
+
+
+```{r}
+part2<-sum(sapply(input,advancedparen))
+part2
+```
+

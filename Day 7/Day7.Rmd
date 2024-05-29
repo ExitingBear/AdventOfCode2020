@@ -1,0 +1,104 @@
+---
+title: "Day 7 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(igraph)
+library(ggraph)
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day7Sample.txt")
+```
+
+## Part 1
+Graphs!   Turning this into a small (or medium small) graph showing what goes into what.
+
+```{r}
+### going to build the graph from an edgelist - so first create the edgelist
+bagm<-matrix(nrow=0,ncol=3)
+bl<-list()
+for(i in 1:length(input)){
+  x<-input[i]
+  ### ignore "does not contain" lines
+  if(!str_detect(x,"contain no other")){
+    x<-str_remove_all(x,"bag\\.|bags\\.")
+    x<-unlist(str_split(x," bags contain | bags, | bag, "))
+    for(j in 2:length(x)){
+      y<-x[j]
+      n<-as.numeric(str_split_i(y," ",1))
+      y<-str_trim(str_sub(y,(str_locate(y," ")[1]+1)))
+      bagm<-rbind(bagm,c(str_trim(x[1]),y,n))}}}
+```
+
+
+```{r}
+### create from edgelist
+baggr<-graph_from_edgelist(bagm[,2:1])
+
+### add weights
+for(i in 1:nrow(bagm)){
+  working<-E(baggr,P=c(bagm[i,2],bagm[i,1]))
+  baggr<-baggr %>%
+    set_edge_attr(name="weight",value=as.numeric(bagm[i,3]),index=working)}
+```
+
+
+```{r}
+pbag<-ggraph(baggr,layout="gem")+
+  geom_edge_diagonal(
+  #  aes(label=weight),angle_calc = 'along',
+  #  label_dodge = unit(2.5, 'mm'),
+    arrow=arrow(length=unit(3,"mm")),
+    end_cap = circle(4,"mm"))+
+  geom_node_text(aes(label = name))
+  
+
+pbag
+```
+To find which ones hold "shiny gold" find the distance between shiny gold and everything else.  If the distance is infinite, it can't hold it.
+
+
+```{r}
+goldhold<-distances(baggr,v="shiny gold",mode=c("out"))
+### remove the ones that cannot hold the shiny gold
+goldhold<-goldhold[which(goldhold!=Inf)]
+### remove the "shiny gold" bag
+goldhold<-goldhold[which(goldhold!=0)]
+part1<-length(goldhold)
+part1
+```
+## Part 2
+Recursion (though I may regret it)
+
+```{r}
+bagcount<-function(bagname,gr){
+  ### if the bag can't be stuffed, its count is 1
+  ngh<-neighbors(gr,bagname,mode=c("in"))
+  if(length(ngh)==0){
+    ### return nothing, because no bags inside
+    return(0)
+  }else{
+    bgcnt<-0
+    for(i in 1:length(ngh)){
+      ### return the number of bags inside+1 for the container bag
+      bgs<-bagcount(ngh[i]$name,gr)+1
+      ### use the edge, to multiply
+      mtplr<-E(gr,P=c(ngh[i]$name,bagname))$weight
+      bgcnt<-bgcnt+(bgs*mtplr)}}
+  bgcnt}
+```
+
+```{r}
+part2<-bagcount("shiny gold",baggr) #bgcount includes the container bag
+part2
+```
+

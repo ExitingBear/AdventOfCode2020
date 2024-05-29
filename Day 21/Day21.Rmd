@@ -1,0 +1,156 @@
+---
+title: "Day 21 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day21Sample.txt")
+```
+
+## Part 1
+Create a df that lists each recipe and its allergins
+
+```{r}
+allergyframe<-function(recipes){
+  af<-as.data.frame(matrix(nrow=0,ncol=1))
+  allingredients<-c()
+  colnames(af)<-c("rcpt")
+  for(i in 1:length(recipes)){
+    r<-recipes[i]
+    ## split into ingredients and allergens
+    ingredients<-unlist(str_split_i(r," \\(contains ",1))
+    allergens<-str_remove_all(unlist(str_split_i(r," \\(contains ",2)),"\\)|,")
+    ### add ingredients to all ingredients
+    allingredients<-unique(c(allingredients,unlist(str_split(ingredients," "))))
+    cn<-colnames(af)[-1]
+    ## list of allergens
+    allergens<-unlist(str_split(allergens," "))
+    ## get allergens that are not already in a column
+    x<-allergens[which(!(allergens %in% cn))]
+    if(length(x)>0){
+      for(j in 1:length(x)){
+      af<-cbind(af,rep(FALSE,nrow(af)))
+      colnames(af)[ncol(af)]<-x[j]}}
+    forcenames<-colnames(af)
+    addrecp<-colnames(af)%in%allergens
+    addrecp[1]<-ingredients
+    names(addrecp)<-colnames(af)
+    af<-rbind(af,addrecp)
+    colnames(af)<-forcenames}
+  for(k in 2:ncol(af)){af[,k]<-as.logical(af[,k])}
+  
+list(af,allingredients)}
+```
+
+```{r}
+x<-allergyframe(input)
+everyingredient<-x[[2]]
+alchecklist<-x[[1]]
+```
+
+function takes in the checklist and returns the list of possible ingredients for each allergin
+```{r}
+findallergicmaybes<-function(chk){
+  allai<-list()
+  for(i in 2:ncol(chk)){
+    aname<-colnames(chk)[i]
+    x<-chk$rcpt[which(chk[,i])]
+    ai<-unlist(str_split(x[1]," "))
+    cat("\n",aname)
+    if(length(x)>1){
+      for(j in 2:length(x)){
+      b<-unlist(str_split(x[j]," "))
+      ai<-intersect(ai,b)
+      cat("-",length(ai))
+      }}
+    cmbo<-list(aname,ai)
+    allai<-c(allai,list(cmbo))}
+allai}
+
+```
+
+```{r}
+optionsforallergies<-findallergicmaybes(alchecklist)
+optionsforallergies
+```
+
+
+```{r}
+findallergicingredients<-function(possibles){
+  isitallergic<-c()
+  for(i in 1:length(possibles)){
+    isitallergic<-unique(c(isitallergic,possibles[[i]][[2]]))}
+  isitallergic}
+```
+
+
+```{r}
+maybeallergic<-findallergicingredients(optionsforallergies)
+```
+
+Then the non-allergic ingredients are the ingredients that are not in maybe allergic
+
+```{r}
+nonallergens<-everyingredient[which(!(everyingredient%in%maybeallergic))]
+nonallergens
+```
+```{r}
+countnonallergens<-function(acklist,nonalls){
+  cnts<-0
+for(i in 1:nrow(acklist)){
+  ### for each row split it
+  x<-unlist(str_split(acklist$rcpt[i]," "))
+  ### find which is in the non-allergens
+  x<-which(x %in% nonalls)
+  ### count that
+  x<-length(x)
+  ### add it to the counts
+  cnts<-cnts+x}
+  cnts}
+
+part1<-countnonallergens(alchecklist,nonallergens)
+part1
+```
+
+## Part 2
+In a repeat of Day 16, find which goes with which
+takes in the list of allergins and turns them into a dataframe
+```{r}
+allerginslot<-function(als){
+  adf<-as.data.frame(matrix(ncol=2,nrow=0))
+  i<-0
+  while(length(als)>0){
+    i<-i+1
+    if(i>length(als)){i<-i-length(als)}
+    a<-als[[i]]
+    if(length(a[[2]])==1){
+      adf<-rbind(adf,list(a[[1]],a[[2]]))
+      als<-als[-i]
+      if(length(als)>0){
+      for(j in 1:length(als)){
+        if(a[[2]]%in%als[[j]][[2]]){
+          als[[j]][[2]]<-als[[j]][[2]][-which(a[[2]]==als[[j]][[2]])]}}}}}
+  colnames(adf)<-c("allergin","ingredient")
+  adf<-adf %>% arrange(allergin)
+  adf}
+
+```
+
+```{r}
+part2<-allerginslot(optionsforallergies)
+part2
+part2<-str_remove_all(str_flatten_comma(part2$ingredient)," ")
+part2
+```
+

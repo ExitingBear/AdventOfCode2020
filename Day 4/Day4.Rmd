@@ -1,0 +1,101 @@
+---
+title: "Day 4 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day4Sample.txt")
+```
+
+## Part 1
+Combine the passport lines into a single line
+
+```{r}
+bl<-c(0,which(input==""),length(input)+1)
+
+passports<-c()
+for(i in 1:(length(bl)-1)){
+  x<-str_flatten(input[(bl[i]+1):(bl[i+1]-1)],collapse=" ")
+  passports<-c(passports,x)}
+```
+
+Function that checks if the passport is valid - 
+
+```{r}
+validpass<-function(passlist){
+  vpass<-0
+  reqd<-c("byr","iyr","eyr","hgt","hcl","ecl","pid")
+  for(i in 1:length(passlist)){
+    ### find if all of the requriements are somewhere in the string
+    x<-sapply(reqd,function(x){str_detect(passlist[i],x)})
+    ### if so, add 1 to the list of valids
+    if(all(x)){vpass<-vpass+1}}
+  vpass}
+```
+
+```{r}
+validpass(passports[1])
+```
+
+
+
+```{r}
+part1<-validpass(passports)
+part1
+```
+## Part 2
+
+```{r}
+strictpass<-function(passlist){
+  vpass<-0
+  i<-0
+  while(i<length(passlist)){
+    i<-i+1
+    ### if it isn't even basically valid - never mind
+    if(validpass(passlist[i])!=1){next}
+    x<-unlist(str_split(passlist[i]," |:"))
+    ### check each requirement one at a time
+    byr<-as.numeric(x[which(x=="byr")+1])
+    if(byr<1920||byr>2002){next}
+    iyr<-as.numeric(x[which(x=="iyr")+1])
+    if(iyr<2010||iyr>2020){next}
+    eyr<-as.numeric(x[which(x=="eyr")+1])
+    if(eyr<2020||eyr>2030){next}
+    hgtu<-str_sub(x[which(x=="hgt")+1],-2,-1)
+    hgtn<-as.numeric(str_sub(x[which(x=="hgt")+1],end=-3))
+    if(hgtu=="cm"){
+      if(hgtn<150||hgtn>193){next}
+    }else if(hgtu=="in"){
+      if(hgtn<59||hgtn>76){next}
+    }else{next}
+    hcl<-x[which(x=="hcl")+1]
+    if(nchar(hcl)!=7){next}
+    if(str_sub(hcl,1,1)!="#"){next}
+    hcl<-str_sub(hcl,start=2)
+    if(!str_detect(hcl,"^[a-f0-9]+$")){next}
+    ecl<-x[which(x=="ecl")+1]
+    if(!(ecl%in%c("amb","blu","brn","gry","grn","hzl","oth"))){next}
+    pid<-x[which(x=="pid")+1]
+    if(nchar(pid)!=9){next}
+    if(!str_detect(pid, "^[:digit:]+$")){next}
+  vpass<-vpass+1}
+  vpass}
+
+```
+
+```{r}
+part2<-strictpass(passports)
+part2
+```
+

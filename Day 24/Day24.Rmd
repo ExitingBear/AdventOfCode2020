@@ -1,0 +1,150 @@
+---
+title: "Day 24 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(reshape2)
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day24Sample.txt")
+```
+
+## Part 1
+Again using the hexagonal grid idea to find and flip tiles
+
+```{r}
+flipme<-function(hexds){
+  ## create a dictionary to say which tiles have flipped
+  flipme<-dict()
+  ## for every path
+  for(i in 1:length(hexds)){
+    tilepath<-hexds[i]
+    ### start at 0,0,0
+    now<-c(0,0,0)
+    ### 
+    while(nchar(tilepath)>0){
+      ### get the
+      if(str_sub(tilepath,1,1)%in%c("n","s")){
+        nxtd<-str_sub(tilepath,1,2)
+        tilepath<-str_sub(tilepath,start=3)
+      }else{
+        nxtd<-str_sub(tilepath,1,1)
+        tilepath<-str_sub(tilepath,start=2)}
+      switch(nxtd,
+             "ne"=now<-now+c(1,-1,0),
+             "sw"=now<-now+c(-1,1,0),
+             "se"=now<-now+c(0,1,-1),
+             "nw"=now<-now+c(0,-1,1),
+             "e"=now<-now+c(1,0,-1),
+             "w"=now<-now+c(-1,0,1),
+             cat("bad directions\n"))}
+    if(!flipme$has(now)){flipme$set(now,"white")}
+    if(flipme$get(now)=="black"){flipme$set(now,"white")
+    }else{flipme$set(now,"black")}
+    }
+  howmanyblack<-length(which(unlist(flipme$values())=="black"))
+  howmanyblack}
+```
+
+```{r}
+flipme(input)
+```
+## Part 2
+First, find out which tiles got flipped
+
+
+```{r}
+longflip<-function(hexds,reps){
+  ## create a dictionary to say which tiles have flipped
+  flipme<-dict()
+  ## for every path
+  for(i in 1:length(hexds)){
+    tilepath<-hexds[i]
+    ### start at 0,0,0
+    now<-c(0,0,0)
+    ### 
+    while(nchar(tilepath)>0){
+      ### get the
+      if(str_sub(tilepath,1,1)%in%c("n","s")){
+        nxtd<-str_sub(tilepath,1,2)
+        tilepath<-str_sub(tilepath,start=3)
+      }else{
+        nxtd<-str_sub(tilepath,1,1)
+        tilepath<-str_sub(tilepath,start=2)}
+      switch(nxtd,
+             "ne"=now<-now+c(1,-1,0),
+             "sw"=now<-now+c(-1,1,0),
+             "se"=now<-now+c(0,1,-1),
+             "nw"=now<-now+c(0,-1,1),
+             "e"=now<-now+c(1,0,-1),
+             "w"=now<-now+c(-1,0,1),
+             cat("bad directions\n"))}
+    if(!flipme$has(now)){flipme$set(now,"white")}
+    if(flipme$get(now)=="black"){flipme$set(now,"white")
+    }else{flipme$set(now,"black")}}
+  r<-1
+  ### may i present the most inefficient sorting algorithm in the world!
+  blacklist<-flipme$keys()[which(unlist(flipme$values())=="black")]
+
+  while(r<=reps){
+    ### dictionary for everything in blacklist
+    oldblack<-dict()
+    for(i in 1:length(blacklist)){oldblack$set(blacklist[[i]],"black")}
+    ### list of tiles that were white that need checking
+    chcktile<-as.data.frame(matrix(nrow=0,ncol=3))
+    ### list of tiles that will become black for the next round
+    newblack<-list()
+    ### start going through the old list
+    for(i in 1:length(blacklist)){
+      tl<-blacklist[[i]]
+      cntbl<-0
+      halo<-list(tl+c(0,1,-1),
+                 tl+c(0,-1,1),
+                 tl+c(1,0,-1),
+                 tl+c(-1,0,1),
+                 tl+c(1,-1,0),
+                 tl+c(-1,1,0))
+      for(h in 1:6){
+        if(oldblack$has(unlist(halo[[h]]))){
+          cntbl<-cntbl+1
+        }else{chcktile<-rbind(chcktile,halo[[h]])}}
+      if(cntbl==1|cntbl==2){
+        newblack<-c(newblack,list(tl))}}
+    ### start going through the surrounding tiles
+    chcktile<-unique(chcktile)
+    for(i in 1:nrow(chcktile)){
+      tl<-unname(unlist(chcktile[i,]))
+      cntbl<-0
+      halo<-list(tl+c(0,1,-1),
+                 tl+c(0,-1,1),
+                 tl+c(1,0,-1),
+                 tl+c(-1,0,1),
+                 tl+c(1,-1,0),
+                 tl+c(-1,1,0))
+      for(h in 1:6){
+        if(oldblack$has(halo[[h]])){cntbl<-cntbl+1}}
+      if(cntbl==2){newblack<-c(newblack,list(tl))
+      }else{
+      }}
+    blacklist<-newblack
+    r<-r+1}
+  blacklist}
+```
+
+```{r}
+part2<-longflip(input,100)
+part2<-length(part2)
+part2
+```
+
+

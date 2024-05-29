@@ -1,0 +1,151 @@
+---
+title: "Day 17 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day17Sample.txt")
+```
+
+just pull out the coordinates for the active (#)
+
+```{r}
+startactive<-as.data.frame(matrix(ncol=3,nrow=0))
+for(i in 1:length(input)){
+  r<-input[i]
+  for(j in 1:nchar(input[1])){
+    c<-str_sub(r,j,j)
+    if(c=="#"){startactive<-rbind(startactive,c(j,i,1))}}}
+colnames(startactive)<-c("x","y","z")
+```
+
+
+
+## Part 1
+Because this is an infinite grid - I'm going to do something stupid.
+
+To grow -  
+1 - get the places that are active (df)
+2 - create a new df of all points that extend around that area by 1 in each dimension  (so a 1x1x1 will become 3x3x3)
+3 - for each of the new points, find out if it will be active
+4 - filter out the inactive points & repeat
+
+Because this is starts as 8x8x1 and it only increase 6 times, it will be at most 20x20x13 which is not that big
+
+Create a function that takes in a point and the old frame and determines whether or  
+```{r}
+nxtcycle<-function(cubex,cubey,cubez,olddf){
+  ## is this active?
+  a<-olddf%>% rowwise%>%
+    filter(x==cubex,y==cubey,z==cubez)
+  ### if a is 0, a is inactive
+  ### if a is 1, a is active
+  a<-nrow(a)
+  if(a<0|a>1){cat("problem\n")}
+  ##  how many of the are the neighbors active
+  n<-olddf%>% rowwise%>%
+    filter(x>=cubex-1,x<=cubex+1,
+           y>=cubey-1,y<=cubey+1,
+           z>=cubez-1,z<=cubez+1)
+  n<-nrow(n)-a
+  ## apply the rules
+  if(a==1){
+    if(n==2|n==3){nxt<-"#"}else{nxt<-"."}
+  }else if(a==0){
+    if(n==3){nxt<-"#"}else{nxt<-"."}}
+nxt}
+```
+
+And now grow this thing:
+
+```{r}
+pocketgrow<-function(pts,reps){
+ for(i in 1:reps){
+   xr<-(min(pts$x)-1):(max(pts$x)+1)
+   yr<-(min(pts$y)-1):(max(pts$y)+1)
+   zr<-(min(pts$z)-1):(max(pts$z)+1)
+   ### check all points that are 1 away from the edges.  
+   newpocket<-tidyr::crossing(x=xr,y=yr,z=zr)
+   newpocket<-newpocket %>% rowwise %>%
+     mutate(isactive=nxtcycle(x,y,z,pts))%>%
+     filter(isactive=="#")%>%
+     select(-isactive)
+   pts<-newpocket}
+pts}
+```
+
+```{r}
+part1<-pocketgrow(startactive,6)
+part1<-nrow(part1)
+part1
+```
+
+## Part 2
+
+Part 2 is essentially the same, just an extra dimension
+
+```{r}
+nxtcycle4<-function(cubew,cubex,cubey,cubez,olddf){
+  ## is this active?
+  a<-olddf%>% rowwise%>%
+    filter(x==cubex,y==cubey,z==cubez,w==cubew)
+  ### if a is 0, a is inactive
+  ### if a is 1, a is active
+  a<-nrow(a)
+  if(a<0|a>1){cat("problem\n")}
+  ##  how many of the are the neighbors active
+  n<-olddf%>% rowwise%>%
+    filter(x>=cubex-1,x<=cubex+1,
+           y>=cubey-1,y<=cubey+1,
+           z>=cubez-1,z<=cubez+1,
+           w>=cubew-1,w<=cubew+1)
+  n<-nrow(n)-a
+  if(a==1){
+    if(n==2|n==3){nxt<-"#"}else{nxt<-"."}
+  }else if(a==0){
+    if(n==3){nxt<-"#"}else{nxt<-"."}}
+nxt}
+```
+
+
+```{r}
+pocketgrow4<-function(pts,reps){
+ for(i in 1:reps){
+   wr<-(min(pts$w)-1):(max(pts$w)+1)
+   xr<-(min(pts$x)-1):(max(pts$x)+1)
+   yr<-(min(pts$y)-1):(max(pts$y)+1)
+   zr<-(min(pts$z)-1):(max(pts$z)+1)
+   newpocket<-tidyr::crossing(w=wr,x=xr,y=yr,z=zr)
+   newpocket<-newpocket %>% rowwise %>%
+     mutate(isactive=nxtcycle4(w,x,y,z,pts))%>%
+     filter(isactive=="#")%>%
+     select(-isactive)
+   pts<-newpocket}
+pts}
+```
+
+```{r}
+startactive4<-as.data.frame(matrix(ncol=4,nrow=0))
+for(i in 1:length(input)){
+  r<-input[i]
+  for(j in 1:nchar(input[1])){
+    c<-str_sub(r,j,j)
+    if(c=="#"){startactive4<-rbind(startactive4,c(1,j,i,1))}}}
+colnames(startactive4)<-c("w","x","y","z")
+```
+
+```{r}
+part2<-pocketgrow4(startactive4,6)
+part2<-nrow(part2)
+part2
+```

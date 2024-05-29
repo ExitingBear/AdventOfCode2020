@@ -1,0 +1,95 @@
+---
+title: "Day 10 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-as.numeric(read_lines("Day10Sample.txt"))
+```
+
+A fairly straightforward search - 
+
+```{r}
+jolted<-function(js){
+  q<-priority_queue()
+  p<-length(which((-3:3)%in%js))
+  q$push(list(0,js,0))
+  while(q$size()>0){
+    curr<-q$pop()
+    if(length(curr[[2]])==0){return(curr[[3]])}
+    ### 3
+    ### add 3
+    p<-length(which((-3:3+curr[[1]])%in%curr[[2]]))
+    a1<-curr[[1]]+1
+    if(a1%in%curr[[2]]){
+      na1<-list(a1,curr[[2]][which(curr[[2]]!=a1)],c(curr[[3]],a1))
+      q$push(na1,-p-length(curr[[2]]))}
+    ### add 2
+    a2<-curr[[1]]+2
+    if(a2%in%curr[[2]]){
+      na2<-list(a2,curr[[2]][which(curr[[2]]!=a2)],c(curr[[3]],a2))
+      q$push(na2,-p-length(curr[[2]]))}
+    ### add 1
+    a3<-curr[[1]]+3
+    if(a3%in%curr[[2]]){
+      na3<-list(a3,curr[[2]][which(curr[[2]]!=a3)],c(curr[[3]],a3))
+      q$push(na3,-p-length(curr[[2]]))}
+    ###
+}
+cat("don't know what happened")}
+```
+
+```{r}
+
+p1<-jolted(input)
+### add device
+p1<-c(p1,tail(p1,1)+3)
+part1<-abs(diff(p1,1))
+part1<-table(part1)
+part1
+```
+```{r}
+69*36
+```
+## Part 2
+
+First, create a df that contains all of the numbers
+```{r}
+### sort the numbers - not necessary, but easier.  Add in 0 & device
+currjolts<-sort(c(0,input,max(input)+3))
+### set each as 0
+joltdf<-cbind(currjolts,rep(0,length(currjolts)))
+### set 1 at 0
+joltdf[1,2]<-1
+colnames(joltdf)<-c("jlts","cnt")
+### make this into a dataframe (to make things easier)
+joltdf<-as.data.frame(joltdf)
+```
+
+```{r}
+### for every line of the dataframe (except the last)
+for(i in 1:(nrow(joltdf)-1)){
+  ### get the next possible stops by adding 1,2, & 3
+  nxtnumber<-joltdf[i,1]+c(1,2,3)
+  ### remove the ones that aren't possible
+  nxtnumber<-nxtnumber[which(nxtnumber%in%joltdf$jlts)]
+  ### figure out which rows those are
+  a<-which(joltdf$jlts%in%nxtnumber)
+  ### update the count of those rows by adding the count of the ways that it got there.
+  joltdf[a,]<-joltdf[a,] %>% rowwise %>% mutate(cnt=cnt+joltdf[i,2])}
+### the answer is the number of ways to get to the device.
+part2<-max(joltdf$cnt)
+part2
+```
+
+

@@ -1,0 +1,130 @@
+---
+title: "Day 14 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day14Sample.txt")
+
+```
+## Part 1
+
+Make a quick function that takes in a mask and number and masks it
+
+```{r}
+maskme<-function(msk,n){
+  msk<-unlist(str_split(msk,""))
+  bn<-c()
+  for(i in 35:0){
+    if(msk[36-i]=="X"){
+    v<-n%/%(2^i)
+    bn<-c(bn,v)}else{bn<-c(bn,msk[36-i])}
+#    cat(bn,"\n")
+    n<-n%%(2^i)}
+  bn<-sum(as.numeric(bn)*(2^(35:0)))
+bn}
+
+```
+Run through the input line by line.
+
+```{r}
+maskthemall<-function(instructions){
+  d<-dict()
+  i<-1
+  ## while additional instructions
+  while(i<=length(instructions)){
+    inst<-instructions[i]
+    ## if the line is a new mask, update the mask
+    if(str_detect(inst,"mask")){mask<-str_sub(inst,start=8)
+    }else{
+      ## if it is a "mem", mask the number, and put it in the appropriate place
+      inst<-as.numeric(unlist(str_split(str_remove_all(inst,"mem\\[|\\] =")," ")))
+      d$set(inst[1],maskme(mask,inst[2]))}
+  i<-i+1}
+  ### sum the stored values
+  answer<-sum(unlist(d$values()))
+answer}
+```
+
+```{r}
+part1<-maskthemall(input)
+part1
+```
+## Part 2
+
+Change the way masks work
+
+```{r}
+input<-read_lines("Day14Sample2.txt")
+```
+
+
+```{r}
+newmask<-function(msk,n){
+  ## first, split the mask
+  msk<-unlist(str_split(msk,""))
+  ## get the updated number
+  bn<-c()
+  for(i in 35:0){
+    switch(msk[36-i],
+           "X"=bn<-c(bn,"X"),
+           "1"=bn<-c(bn,1),
+           "0"={bn<-c(bn,n%/%(2^i))},
+           cat("something went wrong"))
+    n<-n%%(2^i)}
+### expand the options
+bn<-str_flatten(bn)
+### while there's an x
+while(str_detect(bn[1],"X")){
+  bn<-sapply(as.vector(bn),function(x){
+    ### replace it with 0 & 1
+    a<-str_replace(x,"X","0")
+    b<-str_replace(x,"X","1")
+    ### return both replacements
+    c(a,b)})}
+bn<-as.vector(bn)
+### retransform to numbers
+bn<-sapply(bn,function(x){
+  x<-as.numeric(unlist(str_split(x,"")))
+  x<-sum(as.numeric(x)*(2^(35:0)))
+  x})
+unname(bn)}
+
+```
+```{r}
+masklevel2<-function(instructions){
+  d<-dict()
+  i<-1
+  ## while additional instructions
+  while(i<=length(instructions)){
+    inst<-instructions[i]
+    ## if the line is a new mask, update the mask
+    if(str_detect(inst,"mask")){mask<-str_sub(inst,start=8)
+    }else{
+      ## if it is a "mem"
+      inst<-as.numeric(unlist(str_split(str_remove_all(inst,"mem\\[|\\] =")," ")))
+      ## get all of the mem options
+      x<-newmask(mask,inst[1])
+      ## add them all in
+      for(j in 1:length(x)){d$set(x[j],inst[2])}}
+  i<-i+1}
+  ### sum the stored values
+  answer<-sum(unlist(d$values()))
+answer}
+```
+
+```{r}
+part2<-masklevel2(input)
+part2
+```
+

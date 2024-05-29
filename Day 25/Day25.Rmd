@@ -1,0 +1,57 @@
+---
+title: "Day 25 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-c(5764801,17807724) #Sample
+
+```
+
+First - 
+find loop size
+```{r}
+loopsizefinder<-function(n){
+  working<-1
+  loopsize<-0
+  subjectnumber<-7
+  while(working!=n){
+    loopsize<-loopsize+1
+    working<-working*subjectnumber
+    working<-working%%20201227}
+  loopsize}
+```
+
+
+```{r}
+loopsizes<-sapply(input,loopsizefinder)
+loopsizes
+```
+
+```{r}
+encryptionfinder<-function(loopsize,pk){
+  subjectnumber<-pk
+  encryption<-1
+  for(i in 1:loopsize){
+    encryption<-encryption*subjectnumber
+    encryption<-encryption%%20201227}
+  encryption}
+```
+
+
+```{r}
+day25<-sapply(1:2,function(x){
+  encryptionfinder(loopsizes[3-x],input[x])})
+day25
+```
+

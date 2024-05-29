@@ -1,0 +1,43 @@
+---
+title: "Day 1 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-c(1721,979,366,299,675,1456)
+input<-as.numeric(as.vector(input))
+
+```
+
+##Part 1
+
+Subtract each number from 2020 - if the result is in input the list, then it is one of the two numbers.  Multiply them together.
+
+```{r}
+part1<-input[which((2020-input)%in%input)]
+part1<-prod(part1)
+part1
+```
+
+##Part2
+
+Do the same with three numbers
+
+```{r}
+## get the combinations of 3 numbers
+p2<-combn(input,2,FUN=sum)
+part2<-input[which((2020-input)%in%p2)]
+part2<-prod(part2)
+part2
+```
+

@@ -1,0 +1,62 @@
+---
+title: "Day 9 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-as.numeric(read_lines("Day9Sample.txt"))
+```
+
+## Part 1
+I think I can do something much like Day 1
+
+```{r}
+cantsplit<-function(preamble,nums){
+  i<-preamble+1
+  keepgoing<-TRUE
+  while(i<=length(nums)&&keepgoing){
+    target<-nums[i]
+    adders<-nums[(i-preamble):(i-1)]
+ #   cat(i,"-",target,"-",adders,"\n")
+    checkem<-adders[which((target-adders)%in%adders)]
+    if(length(checkem)==0){keepgoing<-FALSE}
+    i<-i+1}
+target}
+```
+
+```{r}
+part1<-cantsplit(5,input)
+part1
+```
+```{r}
+targetadd<-function(nums,target){
+  i<-1
+  keepgoing<-TRUE
+  while(i<=length(nums)&&keepgoing==TRUE){
+    j<-i
+    while(j<=length(nums)){
+      j<-j+1
+      checkme<-sum(nums[i:j])
+   #   cat(nums[i:j],"-",checkme,"\n")
+      if(checkme==target){
+        cat(nums[i:j],"\n")
+        keepgoing<-FALSE
+        return(min(nums[i:j])+max(nums[i:j]))
+      }else if(checkme>target){break}}
+  i<-i+1}}
+```
+
+```{r}
+targetadd(input,part1)
+```
+

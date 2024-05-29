@@ -1,0 +1,98 @@
+---
+title: "Day 8 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day8Sample.txt")
+#input<-read_lines("../../AoCData/AOC2020/Day8.txt")
+
+```
+
+## Part 1
+```{r}
+hgc<-function(instructions){
+  i<-1
+  aclator<-0
+  beenthere<-dict()
+  while(!beenthere$has(i)&&i<=length(instructions)){
+    inst<-instructions[i]
+   # cat(inst,"\n")
+    beenthere$set(i,inst)
+    inst<-as.list(unlist(str_split(inst," ")))
+    inst[[2]]<-as.numeric(inst[[2]])
+    switch(inst[[1]],
+           "nop"={},
+           "acc"=aclator<-aclator+inst[[2]],
+           "jmp"={i<-i+inst[[2]]
+           next},
+           cat("something is wrong"))
+    i<-i+1}
+aclator}
+```
+
+```{r}
+part1<-hgc(input)
+part1
+```
+
+## Part 2
+
+Brute Force FTW
+
+First - small change to the function
+```{r}
+realhgc<-function(instructions){
+  i<-1
+  aclator<-0
+  beenthere<-dict()
+  while(!beenthere$has(i)&&i<=length(instructions)){
+    inst<-instructions[i]
+   # cat(inst,"\n")
+    beenthere$set(i,inst)
+    inst<-as.list(unlist(str_split(inst," ")))
+    inst[[2]]<-as.numeric(inst[[2]])
+    switch(inst[[1]],
+           "nop"={},
+           "acc"=aclator<-aclator+inst[[2]],
+           "jmp"={i<-i+inst[[2]]
+           next},
+           cat("something is wrong"))
+    i<-i+1}
+if(i>length(instructions)){aclator}else{NA}}
+```
+
+
+```{r}
+switcher<-function(instructions){
+  i<-0
+  lastanswer<-NA
+  while(i<length(instructions)&&is.na(lastanswer)){
+    i<-i+1
+    maybe<-instructions[i]
+    if(str_detect(maybe,"acc")){next}
+    trial<-instructions
+    if(str_detect(maybe,"nop")){maybe<-str_replace(maybe,"nop","jmp")
+    }else{maybe<-str_replace(maybe,"jmp","nop")}
+    trial[i]<-maybe
+    lastanswer<-realhgc(trial)}
+lastanswer}
+```
+
+
+```{r}
+switcher(input)
+```
+
+
+

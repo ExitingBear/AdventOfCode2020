@@ -1,0 +1,53 @@
+---
+title: "Day 6 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day6Sample.txt")
+
+```
+
+```{r}
+bl<-c(0,which(input==""),length(input)+1)
+
+part1<-sapply(1:(length(bl)-1),function(x){
+  ### flatten into one bigt long string
+  x<-str_flatten(input[(bl[x]+1):(bl[x+1]-1)])
+  ### split that long string into pieces and count unique letters.
+  x<-length(unique(unlist(str_split(x,""))))
+x})
+part1<-sum(part1)
+part1
+```
+
+## Part 2
+
+Intersect every line to see if there's anything there
+```{r}
+part2<-sapply(1:(length(bl)-1),function(x){
+  ## take the first chunk
+  y<-input[(bl[x]+1):(bl[x+1]-1)]
+  ## split the first line into unique pieces
+  z<-unique(unlist(str_split(y[1],"")))
+  if(length(y)>1){
+    ### for every other line, split into unique pieces, see which are in the previous group
+    for(i in 2:length(y)){
+      z<-intersect(z,unlist(str_split(y[i],"")))}}
+  ### return the length of the questions answered by the whole group 
+  length(z)})
+## sum for part 2
+part2<-sum(part2)
+part2
+```
+

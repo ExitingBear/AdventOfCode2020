@@ -1,0 +1,71 @@
+---
+title: "Day 13 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(numbers)
+library(reshape2)
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day13Sample.txt")
+
+```
+
+
+## Part 1
+
+Time mod bus# is how far away the current bus is.   So bus# - (time mod bus#) is how far away the next bus is.
+
+Multiply the bus number to get the answer
+```{r}
+## just the numerical buses
+tstamp<-as.numeric(input[1])
+part1bus<-as.numeric(unlist(str_split(str_replace_all(input[2],",x",""),",")))
+
+part1<-part1bus-(tstamp%%part1bus)
+part1<-part1[which(part1==min(part1))]*part1bus[which(part1==min(part1))]
+part1
+```
+## Part 2 
+After trying a lot of plunking around with the Chinese remainder theorem (which worked for *every single sample, but the real data* - did it the less confusing way.
+
+```{r}
+## start by changing input to a line of bus numbers & 0s
+buses<-as.numeric(unlist(str_split(str_replace_all(input[2],"x","0"),",")))
+## find their places in line, starting from 0
+remainders<-which(buses>0)-1
+buses<-buses[which(buses>0)]
+## remainders will then become where they are at time t
+remainders<-(buses-remainders)
+###  from there, mod by bus will give that in positive (or some value closer to 0 if possible)
+remainders<-remainders%%buses
+buses
+remainders
+```
+
+```{r}
+## start with part 2=1
+part2<-1
+## multiplier(really an adder also is 1)
+mtp<-1
+i<-1
+## start with the first bus
+while(i<=length(buses)){
+  ## if the current answer - the remainder for that bus is a multiple of that bus, try the next
+  while((part2-remainders[i])%%buses[i]!=0){
+    ### otherwise, add in a the product of all the previous buses (so the answer stays the same)
+    part2<-part2+mtp}
+  ## once there's a good answer, multiply that bus's multiplier so that it will conserve its remainder, too.
+  mtp<-mtp*buses[i]
+  i<-i+1}
+part2
+```

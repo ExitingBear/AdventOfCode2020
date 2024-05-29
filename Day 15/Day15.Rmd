@@ -1,0 +1,103 @@
+---
+title: "Day 15 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+stnums<-c(0,3,6)
+```
+
+```{r}
+elfshouter<-function(sn,reps){
+  ## create a dictionary it will store the last time a number was shouted
+  d<-ordered_dict()
+  ### for all but the last number in the starting numbers, simply add the number to the dictionary
+  for(turn in 1:(length(sn)-1)){
+    d$set(sn[turn],turn)}
+  ## increment at the last number
+  turn<-turn+1
+  ## make its position the "last position"
+  lastpos<-turn
+  ## and the number will be the "last number"
+  lastnum<-sn[turn]
+  ## increment to the next turn (first calculated turn)
+  turn<-turn+1
+  ##  for all calculated turns
+  while(turn<=reps){
+    ### if the last number has been called before
+    ### if it has, call out the difference between its position and the last time it was called
+    ### if it has not, call out 0.
+    if(d$has(lastnum)){shout<-lastpos-d$get(lastnum)}else{shout<-0}
+    ### update the dictionary to say this number was called for that position
+    d$set(lastnum,lastpos)
+    ### update the "last position" to this position
+    lastpos<-turn
+    ### update last number to the number shouted
+    lastnum<-shout
+    ### move to the next turn
+    turn<-turn+1}
+  ### return the number shouted
+  shout}
+```
+
+```{r}
+elfshouter(stnums,2020)
+```
+
+## Part 2
+Sometimes, brute force works.  This takes about 5 minutes - which is short enough not to care.
+
+
+```{r}
+elfshouter(stnums,30000000)
+```
+After checking forums - doing this as a big vector (which would seem to be the wrong move) makes this about 1/2 minute instead of 5 minutes.
+
+```{r}
+elfshouterv<-function(sn,reps){
+  ## create a dictionary it will store the last time a number was shouted
+  vshout<-rep(NA,reps)
+  ### for all but the last number in the starting numbers, simply add the number to the dictionary
+  for(turn in 1:(length(sn)-1)){
+    vshout[sn[turn]+1]<-turn}
+  ## increment at the last number
+  turn<-turn+1
+  ## make its position the "last position"
+  lastpos<-turn
+  ## and the number will be the "last number"
+  lastnum<-sn[turn]
+  ## increment to the next turn (first calculated turn)
+  turn<-turn+1
+  ##  for all calculated turns
+  while(turn<=reps){
+    ### if the last number has been called before
+    ### if it has, call out the difference between its position and the last time it was called
+    ### if it has not, call out 0.
+    if(!is.na(vshout[lastnum+1])){shout<-lastpos-vshout[lastnum+1]}else{shout<-0}
+    ### update the dictionary to say this number was called for that position
+    vshout[lastnum+1]<-lastpos
+    ### update the "last position" to this position
+  #  cat(turn,shout,"\n")
+    lastpos<-turn
+    ### update last number to the number shouted
+    lastnum<-shout
+    ### move to the next turn
+    turn<-turn+1}
+  ### return the number shouted
+  shout}
+```
+
+
+```{r}
+elfshouterv(stnums,30000000)
+```

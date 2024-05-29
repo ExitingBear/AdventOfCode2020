@@ -1,0 +1,45 @@
+---
+title: "Day 5 Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(readr)
+library(collections)
+options(scipen = 999)
+```
+
+```{r}
+input<-read_lines("Day5Sample.txt")
+
+```
+
+
+## Part 1
+Change this into binary then find the max
+```{r}
+seatid<-sapply(input,function(x){
+  x<-str_replace_all(x,"R|B","1")
+  x<-str_replace_all(x,"F|L","0")
+  x<-strtoi(x,2)
+x})
+part1<-max(seatid)
+part1
+```
+
+## Part 2
+Find all of the seats where the 1 higher is not in the list.  Find all the seats where the one lower is not in the list
+The intersection of the lists is my seat
+(The sample data does not include a valid seat.)
+
+```{r}
+part2<-intersect(
+  seatid[which(!((seatid+1) %in% seatid))]+1,
+  seatid[which(!((seatid-1) %in% seatid))]-1)
+part2
+```
+
